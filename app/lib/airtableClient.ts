@@ -36,17 +36,10 @@ export async function getAllCustomers() {
   }
 }
 
-export type ItemFields = {
-  'Item Name': string; // Use the exact field names from Airtable
-  'Status': 'In Stock' | 'Sold' | 'In Transit';
-  'Value'?: number; // Use '?' for optional fields
-  'Customer ID'?: readonly string[]; // Linked records are arrays of strings (Record IDs)
-};
-
 // Type for an object item (Airtable record)
 export type ObjectItem = {
   id: string;
-  fields: ItemFields;
+  fields: Record<string, any>;
 };
 
 // Fetch all items for a given customerId
@@ -56,7 +49,7 @@ export async function getObjectsForCustomer(customerId: string): Promise<ObjectI
       filterByFormula: `{Customer ID} = '${customerId}'`,
       view: 'Grid view',
     }).all();
-    return records.map(record => ({ id: record.id, fields: record.fields as ItemFields}));
+    return records.map(record => ({ id: record.id, fields: record.fields }));
   } catch (err) {
     console.error('Error fetching items for customer:', err);
     throw err;
