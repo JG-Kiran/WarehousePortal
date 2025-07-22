@@ -2,11 +2,9 @@ import Airtable from 'airtable';
 
 const apiKey = process.env.AIRTABLE_API_KEY;
 const baseId = process.env.AIRTABLE_BASE_ID;
-
 if (!apiKey || !baseId) {
   throw new Error('Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID environment variable');
 }
-
 Airtable.configure({
   endpointUrl: 'https://api.airtable.com',
   apiKey: apiKey,
@@ -14,32 +12,16 @@ Airtable.configure({
 
 const base = new Airtable().base(baseId);
 
-// Fetch all customers (IDs and names)
-export async function getAllCustomers() {
-  try {
-    const records = await base('Customer').select({
-      view: 'Grid view' 
-    }).all();
-
-    console.log('Successfully fetched customers:', records.length);
-    const customers = records.map(record => ({
-      id: record.id, // The real Airtable Record ID
-      customerId: record.get('Customer ID'),
-      name: record.get('Name'),
-    }));
-
-    return customers;
-
-  } catch (err) {
-    console.error('Error fetching customers:', err);
-    throw err; // Re-throw the error to be handled by the calling function
-  }
-}
 
 // Type for an object item (Airtable record)
 export type ObjectItem = {
   id: string;
   fields: Record<string, any>;
+};
+
+export type LogEntry = {
+  pallet: { id: string; fields: Record<string, any> };
+  items: { id: string; fields: Record<string, any> }[];
 };
 
 // Fetch all items for a given customerId
@@ -52,6 +34,75 @@ export async function getObjectsForCustomer(customerId: string): Promise<ObjectI
     return records.map(record => ({ id: record.id, fields: record.fields }));
   } catch (err) {
     console.error('Error fetching items for customer:', err);
+    throw err;
+  }
+}
+
+export async function getOnTheWayOperations() {
+  try {
+    const records = await base('Operation').select({
+      filterByFormula: `{Status} = 'On the way'`,
+      view: 'Grid view',
+    }).all();
+    return records.map(record => ({ id: record.id, fields: record.fields }));
+  } catch (err) {
+    console.error('Error fetching on the way operations:', err);
+    throw err;
+  }
+}
+
+export async function getItemsForOperation(operationId: string) {
+  try {
+    const records = await base('Item').select({
+      filterByFormula: `{Operation ID} = '${operationId}'`,
+      view: 'Grid view',
+    }).all();
+    return records.map(record => ({ id: record.id, fields: record.fields }));
+  } catch (err) {
+    console.error('Error fetching items for operation:', err);
+    throw err;
+  }
+}
+
+export async function updateItemsAndOperation(operationId: string, logs: LogEntry[]) {
+  try {
+    const itemUpdates = logs.flatMap(log => 
+      log.items.map(item => ({
+        id: item.id,
+        fields: {
+          'Pallet ID': log.pallet.id, 
+          'Status': 'In Storage'
+        }
+      }))
+    );
+
+    // Airtable's update method can handle up to 10 records at a time.
+    // This loop processes the updates in chunks of 10.
+    for (let i = 0; i < itemUpdates.length; i += 10) {
+      const chunk = itemUpdates.slice(i, i + 10);
+      await base('Item').update(chunk);
+    }
+
+    // Finally, update the operation status.
+    const operationRecords = await base('Operations').select({
+        filterByFormula: `{Operation ID} = '${operationId}'`,
+        maxRecords: 1
+    }).firstPage();
+
+    if (operationRecords.length > 0) {
+        const operationRecordId = operationRecords[0].id;
+        await base('Operations').update([
+            {
+                id: operationRecordId,
+                fields: { 'Status': 'In Storage' }
+            }
+        ]);
+    } else {
+        throw new Error(`Operation with ID ${operationId} not found.`);
+    }
+
+  } catch (err) {
+    console.error('Error in batch update to Airtable:', err);
     throw err;
   }
 }

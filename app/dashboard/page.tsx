@@ -3,41 +3,44 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Customer = {
+type Operation = {
   id: string;
-  name: string;
-  customerId: string;
+  fields: {
+    'Operation ID': string;
+    [key: string]: any;
+  };
 };
 
 export default function AgentDashboard() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const router = useRouter();
 
   useEffect(() => {
-    async function fetchCustomers() {
+    async function fetchOperations() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('/api/airtable/customers');
+        const res = await fetch('/api/airtable/operations');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        setCustomers(data.customers);
+        setOperations(data.operations);
       } catch (err) {
-        setError('Failed to fetch customers');
+        setError('Failed to fetch operations');
       } finally {
         setLoading(false);
       }
     }
-    fetchCustomers();
+    fetchOperations();
   }, []);
 
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSelectedId(e.target.value);
-    if (e.target.value) {
-      router.push(`/customer/${e.target.value}`);
+    const operationId = e.target.value;
+    setSelectedId(operationId);
+    if (operationId) {
+      router.push(`/operations/${operationId}`);
     }
   }
 
@@ -45,9 +48,9 @@ export default function AgentDashboard() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 text-black">
       <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold mb-4 text-center">Agent Dashboard</h1>
-        <p className="text-center mb-6">Welcome to the agent dashboard!<br/>Select a customer to view their items.</p>
+        <p className="text-center mb-6">Welcome to the agent dashboard!<br/>Select an operation to view its details.</p>
         {loading ? (
-          <div className="text-center">Loading customers...</div>
+          <div className="text-center">Loading operations...</div>
         ) : error ? (
           <div className="text-red-500 text-center">{error}</div>
         ) : (
@@ -56,10 +59,10 @@ export default function AgentDashboard() {
             value={selectedId}
             onChange={handleSelect}
           >
-            <option value="">Select a customer</option>
-            {customers.map(c => (
-              <option key={c.id} value={c.customerId}>
-                {c.name} - ({c.customerId})
+            <option value="">Select an operation</option>
+            {operations.map(op => (
+              <option key={op.id} value={op.fields['Operation ID']}>
+                {op.fields['Operation ID']}
               </option>
             ))}
           </select>
