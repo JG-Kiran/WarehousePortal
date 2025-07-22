@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getObjectsForCustomer, ObjectItem } from '../../airtableClient';
+import type { ObjectItem } from '../../lib/airtableClient';
 
 export default function CustomerObjectsPage() {
   const { customerId } = useParams() as { customerId: string };
@@ -15,8 +15,10 @@ export default function CustomerObjectsPage() {
       setLoading(true);
       setError('');
       try {
-        const objs = await getObjectsForCustomer(customerId);
-        setObjects(objs);
+        const res = await fetch(`/api/airtable/items?customerId=${customerId}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setObjects(data.items);
       } catch (err) {
         setError('Failed to fetch objects.');
       } finally {
