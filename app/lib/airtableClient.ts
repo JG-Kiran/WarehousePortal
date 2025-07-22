@@ -55,3 +55,45 @@ export async function getObjectsForCustomer(customerId: string): Promise<ObjectI
     throw err;
   }
 }
+
+// Update item status by record ID
+export async function updateItemStatus(recordId: string, status: string) {
+  try {
+    await base('Item').update([
+      {
+        id: recordId,
+        fields: {
+          'Status': status
+        }
+      }
+    ]);
+    console.log(`Successfully updated item ${recordId} status to ${status}`);
+  } catch (err) {
+    console.error('Error updating item status:', err);
+    throw err;
+  }
+}
+
+// Find item by barcode within a customer's items
+export async function findItemByBarcode(customerId: string, barcode: string): Promise<ObjectItem | null> {
+  try {
+    // Try different possible barcode field names
+    const possibleFieldNames = ['Barcode', 'Code', 'QR Code', 'Item Code', 'Barcode Number'];
+    
+    for (const fieldName of possibleFieldNames) {
+      const records = await base('Item').select({
+        filterByFormula: `AND({Customer ID} = '${customerId}', {${fieldName}} = '${barcode}')`,
+        view: 'Grid view',
+      }).all();
+      
+      if (records.length > 0) {
+        return { id: records[0].id, fields: records[0].fields };
+      }
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('Error finding item by barcode:', err);
+    throw err;
+  }
+}
