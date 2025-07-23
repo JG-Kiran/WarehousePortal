@@ -105,7 +105,7 @@ export default function OperationPage() {
       if (!loggedItemIds.has(foundItem.id)) {
         setSelectedItemIds(prev => {
           const newSet = new Set(prev);
-          newSet.has(foundItem.id) ? newSet.delete(foundItem.id) : newSet.add(foundItem.id);
+          newSet.add(foundItem.id);
           return newSet;
         });
       }
@@ -116,6 +116,14 @@ export default function OperationPage() {
     setCurrentPallet({ id: barcode });
   };
   
+  const handleUnselectItem = (itemIdToUnselect: string) => {
+    setSelectedItemIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(itemIdToUnselect);
+      return newSet;
+    });
+  };
+
   const handleAddPalletClick = () => {
     const palletBarcode = prompt("Scanner not detected. Please enter pallet barcode manually:");
     if (palletBarcode) {
@@ -178,55 +186,75 @@ export default function OperationPage() {
   if (loading) return <div className="text-center p-10">Loading...</div>;
   if (error) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
 
+  const SelectedItemsList = () => (
+    <ul className="text-sm list-none font-mono pr-2">
+      {items.filter(i => selectedItemIds.has(i.id)).map(i => (
+        <li key={i.id} className="flex justify-between items-center bg-gray-100 mb-1 p-1 rounded">
+          <span>{getDisplayValue(i.fields['Barcode'])}</span>
+          <button 
+            onClick={() => handleUnselectItem(i.id)}
+            className="text-red-500 font-bold px-2 rounded hover:bg-red-100"
+            aria-label={`Remove item ${getDisplayValue(i.fields['Barcode'])}`}
+          >
+            &times;
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <>
-      {/* --- Desktop Layout (Visible on medium screens and up) --- */}
+      {/* --- Desktop Layout --- */}
       <div className="hidden md:flex flex-col h-screen bg-gray-100 text-black">
         <header className="bg-white shadow-md p-4 text-center">
           <h1 className="text-2xl font-bold">Operation: {operationId}</h1>
         </header>
         <main className="flex-grow flex p-4 gap-4 overflow-hidden">
+          {/* Left Panel for Pallet and Actions */}
           <div className="w-1/4 bg-white rounded-lg shadow p-4 flex flex-col">
-            <h2 className="text-lg font-semibold mb-3 border-b pb-2">Scanned Pallet</h2>
-            <div className="flex-grow">
-              {currentPallet ? (
-                <div className="p-4 rounded border bg-blue-100 border-blue-400 text-center">
-                  <span className="font-bold text-lg font-mono">{currentPallet.id}</span>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 pt-10">Scan a pallet to begin.</div>
-              )}
+            <h2 className="text-lg font-semibold mb-3 border-b pb-2">1. Pallet & Actions</h2>
+            <div className="mb-4">
+              <h3 className="font-semibold">Scanned Pallet</h3>
+              {currentPallet ? <div className="p-2 mt-1 rounded border bg-blue-100 text-center"><span className="font-bold text-lg font-mono">{currentPallet.id}</span></div> : <div className="text-center text-gray-500 pt-2">Scan a pallet.</div>}
             </div>
-            <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2 font-semibold">
-              Add Pallet Manually
-            </button>
+            <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2 font-semibold mb-4">Add Pallet Manually</button>
+            <div className="border-t pt-4 mt-auto">
+              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">Add to Log</button>
+            </div>
           </div>
-          <div className="flex-grow bg-white rounded-lg shadow p-4 overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-3 border-b pb-2">Items for Operation</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {items.map(item => {
-                const isSelected = selectedItemIds.has(item.id);
-                const isLogged = loggedItemIds.has(item.id);
-                const barcodeValue = getDisplayValue(item.fields['Barcode']);
-                return (
-                  <div key={item.id} className={`p-3 rounded border text-center font-mono text-sm break-all transition-colors ${isLogged ? 'bg-gray-200 text-gray-500' : isSelected ? 'bg-green-500 text-white' : 'hover:bg-gray-50 cursor-pointer'}`} onClick={() => !isLogged && handleBarcodeScanned(barcodeValue)}>
-                    {barcodeValue}
-                  </div>
-                );
-              })}
+          
+          {/* Right side now contains Selected Items and the Item Grid */}
+          <div className="flex-grow flex flex-col gap-4 overflow-hidden">
+            {/* Selected Items Panel (Top Right) */}
+            <div className="bg-white rounded-lg shadow p-4 flex flex-col h-1/3">
+              <h2 className="text-lg font-semibold mb-2 border-b pb-2">2. Selected Items ({selectedItemIds.size})</h2>
+              <div className="flex-grow overflow-y-auto">
+                <SelectedItemsList />
+              </div>
+            </div>
+            {/* Item Grid (Bottom Right) */}
+            <div className="bg-white rounded-lg shadow p-4 flex-grow flex flex-col overflow-y-auto">
+              <h2 className="text-lg font-semibold mb-3 border-b pb-2">3. Scan Items for Operation</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {items.map(item => {
+                  const isSelected = selectedItemIds.has(item.id);
+                  const isLogged = loggedItemIds.has(item.id);
+                  const barcodeValue = getDisplayValue(item.fields['Barcode']);
+                  return (<div key={item.id} className={`p-3 rounded border text-center font-mono text-sm break-all transition-colors ${isLogged ? 'bg-gray-200 text-gray-500' : isSelected ? 'bg-green-500 text-white' : 'hover:bg-gray-50 cursor-pointer'}`} onClick={() => !isLogged && handleBarcodeScanned(barcodeValue)}>{barcodeValue}</div>);
+                })}
+              </div>
             </div>
           </div>
         </main>
         <footer className="bg-white shadow-up p-4 h-1/3 flex flex-col gap-4">
           <div className="flex-grow flex gap-4 overflow-hidden">
-            <div className="w-1/3 border rounded-lg p-4 flex flex-col">
+            <div className="w-1/3 border rounded-lg p-4 flex flex-col overflow-y-auto">
               <h3 className="font-semibold text-lg mb-2">Current Session</h3>
               <div className="mb-2"><strong>Scanned Pallet: </strong><span className="font-mono">{currentPallet?.id || 'None'}</span></div>
-              <div className="mb-4 flex-grow">
-                <strong>Selected Items ({selectedItemIds.size}):</strong>
-                <ul className="text-sm list-disc list-inside font-mono">{items.filter(i => selectedItemIds.has(i.id)).map(i => <li key={i.id}>{getDisplayValue(i.fields['Barcode'])}</li>)}</ul>
-              </div>
-              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">Add to Log</button>
+              <div className="mb-2 font-semibold">Selected Items ({selectedItemIds.size}):</div>
+              <div className="flex-grow overflow-y-auto"><SelectedItemsList /></div>
+              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400 mt-2">Add to Log</button>
             </div>
             <div className="flex-grow border rounded-lg p-4 overflow-y-auto">
               <h3 className="font-semibold text-lg mb-2">Session Logs ({logs.length})</h3>
@@ -237,26 +265,22 @@ export default function OperationPage() {
         </footer>
       </div>
 
-      {/* --- Mobile Layout (Visible on small screens) --- */}
+      {/* --- Mobile Layout --- */}
       <div className="md:hidden flex flex-col h-screen bg-gray-100 text-black">
-        <header className="bg-white shadow p-4 text-center">
-          <h1 className="text-xl font-bold">Op: {operationId}</h1>
-        </header>
-
-        {/* --- Main Content Area (Switches based on active tab) --- */}
+        <header className="bg-white shadow p-4 text-center"><h1 className="text-xl font-bold">Op: {operationId}</h1></header>
         <main className="flex-grow p-4 overflow-y-auto">
           {activeTab === 'scan' && (
             <div>
               <div className="bg-white rounded-lg shadow p-4 mb-4">
                 <h2 className="text-lg font-semibold mb-2">1. Scan Pallet</h2>
-                {currentPallet ? (
-                  <div className="p-3 rounded bg-blue-100 text-center font-mono font-bold">{currentPallet.id}</div>
-                ) : (
-                  <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2">Tap to Add Pallet</button>
-                )}
+                {currentPallet ? <div className="p-3 rounded bg-blue-100 text-center font-mono font-bold">{currentPallet.id}</div> : <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2">Tap to Add Pallet</button>}
+              </div>
+              <div className="bg-white rounded-lg shadow p-4 mb-4">
+                <h2 className="text-lg font-semibold mb-2">2. Selected Items ({selectedItemIds.size})</h2>
+                <div className="max-h-24 overflow-y-auto"><SelectedItemsList /></div>
               </div>
               <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold mb-2">2. Scan Items</h2>
+                <h2 className="text-lg font-semibold mb-2">3. Scan Items</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {items.map(item => {
                     const isSelected = selectedItemIds.has(item.id);
@@ -269,7 +293,6 @@ export default function OperationPage() {
               <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-3 font-semibold disabled:bg-gray-400 mt-4">Add {selectedItemIds.size} Items to Log</button>
             </div>
           )}
-
           {activeTab === 'logs' && (
             <div className="bg-white rounded-lg shadow p-4">
               <h2 className="text-lg font-semibold mb-2">Review Logs ({logs.length})</h2>
@@ -278,16 +301,12 @@ export default function OperationPage() {
             </div>
           )}
         </main>
-        
-        {/* --- Mobile Tab Bar --- */}
         <footer className="bg-white shadow-up grid grid-cols-2 gap-px">
           <button onClick={() => setActiveTab('scan')} className={`py-4 text-sm font-medium transition-colors ${activeTab === 'scan' ? 'bg-indigo-500 text-white' : 'bg-white'}`}>
-            SCAN
-            {selectedItemIds.size > 0 && <span className="ml-2 inline-block bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">{selectedItemIds.size}</span>}
+            SCAN <span className="text-xs">({selectedItemIds.size})</span>
           </button>
           <button onClick={() => setActiveTab('logs')} className={`py-4 text-sm font-medium transition-colors ${activeTab === 'logs' ? 'bg-indigo-500 text-white' : 'bg-white'}`}>
-            LOGS
-            {logs.length > 0 && <span className="ml-2 inline-block bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">{logs.length}</span>}
+            LOGS <span className="text-xs">({logs.length})</span>
           </button>
         </footer>
       </div>
