@@ -144,6 +144,22 @@ export default function OperationPage() {
     setSelectedItemIds(new Set());
   };
 
+  const handleEditLog = (logIdToEdit: string) => {
+    if (selectedItemIds.size > 0) {
+        alert('Please log your currently selected items before editing another log.');
+        return;
+    }
+    const logToEdit = logs.find(log => log.logId === logIdToEdit);
+    if (!logToEdit) return;
+
+    // Restore the pallet and selected items
+    setCurrentPallet(logToEdit.pallet);
+    setSelectedItemIds(new Set(logToEdit.items.map(item => item.id)));
+
+    // Then, remove the log as if it were being cleared
+    handleClearLog(logIdToEdit);
+  };
+  
   const handleClearLog = (logIdToRemove: string) => {
     const logToRemove = logs.find(log => log.logId === logIdToRemove);
     if (!logToRemove) return;
@@ -229,13 +245,24 @@ export default function OperationPage() {
             {log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}
             </ul>
           </div>
-          <button
-            onClick={() => handleClearLog(log.logId)}
-            className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
-            aria-label={`Clear log for pallet ${log.pallet.id}`}
-          >
-            &times;
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Edit button */}
+            <button 
+              onClick={() => handleEditLog(log.logId)}
+              className="bg-blue-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-blue-600 text-xs"
+              aria-label={`Edit log for pallet ${log.pallet.id}`}
+            >
+              &#9998; {/* Pencil icon */}
+            </button>
+            {/* Delete button */}
+            <button 
+              onClick={() => handleClearLog(log.logId)}
+              className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
+              aria-label={`Clear log for pallet ${log.pallet.id}`}
+            >
+              &times;
+            </button>
+          </div>
         </li>
       ))}
     </ul>
@@ -291,11 +318,13 @@ export default function OperationPage() {
             </div>
           </div>
         </main>
-        <footer className="bg-white shadow-up p-4 h-1/3 flex flex-col gap-4">
-          <div className="flex-grow border rounded-lg p-4 overflow-y-auto">
+        <footer className="bg-white shadow-up p-4 h-1/3 flex gap-4">
+          <div className="flex-grow border rounded-lg p-4 flex flex-col overflow-y-auto">
             <h2 className="text-lg font-semibold border-b pb-2 mb-3">3. Session Logs ({logs.length})</h2>
-            <div className="flex-grow overflow-y-auto"><LogList /></div>
-            <div className="border-t pt-4 mt-auto">
+            <div className="flex-grow overflow-y-auto">
+              <LogList />
+              </div>
+            <div className="flex-shrink-0">
               <button onClick={handleSubmitToAirtable} disabled={logs.length === 0 || isSubmitting} className="w-full bg-green-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">{isSubmitting ? 'Submitting...' : `Submit All Logs`}</button>
             </div>
           </div>
