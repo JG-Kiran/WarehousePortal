@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import type { ObjectItem } from '../../lib/airtableClient';
 
@@ -14,6 +14,7 @@ export default function CustomerObjectsPage() {
   const [lastKeyTime, setLastKeyTime] = useState(0);
   const [scannedItems, setScannedItems] = useState<Set<string>>(new Set());
   const [updating, setUpdating] = useState(false);
+  const scannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchObjects() {
@@ -33,7 +34,7 @@ export default function CustomerObjectsPage() {
     fetchObjects();
   }, [customerId]);
 
-  // Barcode scanner listener
+  // Barcode scanner listener (works on both desktop and mobile)
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       const currentTime = Date.now();
@@ -43,6 +44,10 @@ export default function CustomerObjectsPage() {
         if (barcodeBuffer.trim()) {
           handleBarcodeScanned(barcodeBuffer.trim());
           setBarcodeBuffer('');
+        }
+        // For mobile: clear the hidden input after processing
+        if (scannerInputRef.current) {
+          scannerInputRef.current.value = '';
         }
         return;
       }
@@ -57,7 +62,35 @@ export default function CustomerObjectsPage() {
       setLastKeyTime(currentTime);
     };
 
+    // Desktop: Listen to window events
     window.addEventListener('keypress', handleKeyPress);
+
+    // Mobile: Listen to input events and manage focus
+    const scannerInput = scannerInputRef.current;
+    if (scannerInput) {
+      // Ensure input stays focused for scanner
+      scannerInput.focus();
+      
+      const handleInputKeyPress = (event: KeyboardEvent) => handleKeyPress(event);
+      const handleFocusLoss = () => {
+        // Re-focus if focus is lost (helps with mobile scanner input)
+        setTimeout(() => {
+          if (scannerInput && document.activeElement !== scannerInput) {
+            scannerInput.focus();
+          }
+        }, 100);
+      };
+
+      scannerInput.addEventListener('keypress', handleInputKeyPress);
+      scannerInput.addEventListener('blur', handleFocusLoss);
+      
+      return () => {
+        window.removeEventListener('keypress', handleKeyPress);
+        scannerInput.removeEventListener('keypress', handleInputKeyPress);
+        scannerInput.removeEventListener('blur', handleFocusLoss);
+      };
+    }
+
     return () => window.removeEventListener('keypress', handleKeyPress);
   }, [barcodeBuffer, lastKeyTime]);
 
@@ -256,6 +289,20 @@ export default function CustomerObjectsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 flex flex-col items-center">
+      {/* Hidden input for mobile barcode scanner support */}
+      <input
+        ref={scannerInputRef}
+        type="text"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          opacity: 0,
+          pointerEvents: 'none'
+        }}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
       <div className="w-full max-w-md">
         <h1 className="text-xl font-bold mb-4 text-center">Tracked Objects</h1>
         
