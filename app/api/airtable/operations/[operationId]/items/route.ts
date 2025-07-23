@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getItemsForOperation } from '@/app/lib/airtableClient';
 
-type RouteParams = {
-  params: {
-    operationId: string;
-  }
-}
-
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(
+  request: Request,
+  { params }: { params: { operationId: string } }
+) {
   const { operationId } = params;
+
   if (!operationId) {
     return NextResponse.json({ error: 'Missing operationId' }, { status: 400 });
   }
