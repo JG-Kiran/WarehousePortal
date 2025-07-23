@@ -47,10 +47,11 @@ export default function OperationPage() {
   // --- Data Fetching for Items ---
   useEffect(() => {
     async function fetchItems() {
+      if (!operationId) return;
       setLoading(true);
       setError('');
       try {
-        const itemsRes = await fetch(`/api/airtable/operations/${operationId}/items`);
+        const itemsRes = await fetch(`/api/airtable/items?operationId=${operationId}`);
         if (!itemsRes.ok) throw new Error('Failed to fetch items for operation.');
         const itemsData = await itemsRes.json();
         setItems(itemsData.items);
@@ -142,7 +143,7 @@ export default function OperationPage() {
     setError('');
 
     try {
-      const res = await fetch(`/api/airtable/operations/${operationId}/submit`, {
+      const res = await fetch(`/api/airtable/submit?operationId=${operationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logs }),

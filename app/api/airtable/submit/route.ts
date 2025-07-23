@@ -1,16 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { updateItemsAndOperation } from '@/app/lib/airtableClient';
 
-type RouteParams = {
-  params: {
-    operationId: string;
-  }
-}
+export async function POST(request: NextRequest) {
+  const operationId = request.nextUrl.searchParams.get('operationId');
 
-export async function POST(request: Request, { params }: RouteParams) {
-  const { operationId } = params;
   if (!operationId) {
-    return NextResponse.json({ error: 'Missing operationId' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing operationId query parameter' }, { status: 400 });
   }
   
   try {
@@ -19,7 +14,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Missing or invalid logs' }, { status: 400 });
     }
 
-    // Call the Airtable client function to perform the updates
     await updateItemsAndOperation(operationId, logs);
     
     return NextResponse.json({ success: true, message: 'Operation and items updated successfully.' });
