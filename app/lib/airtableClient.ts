@@ -70,7 +70,7 @@ export async function updateItemsAndOperation(operationId: string, logs: LogEntr
       log.items.map(item => ({
         id: item.id,
         fields: {
-          'Pallet ID': log.pallet.id, 
+          'Pallet ID': { text: log.pallet.id}, 
           'Status': 'In Storage'
         }
       }))
@@ -80,7 +80,7 @@ export async function updateItemsAndOperation(operationId: string, logs: LogEntr
     // This loop processes the updates in chunks of 10.
     for (let i = 0; i < itemUpdates.length; i += 10) {
       const chunk = itemUpdates.slice(i, i + 10);
-      await base('Item').update(chunk);
+      await base('Item').update(chunk as any);
     }
 
     // Finally, update the operation status.
