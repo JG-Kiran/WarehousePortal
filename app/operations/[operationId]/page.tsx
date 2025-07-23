@@ -150,6 +150,21 @@ export default function OperationPage() {
     setSelectedItemIds(new Set());
   };
 
+  const handleClearLog = (logIdToRemove: string) => {
+    const logToRemove = logs.find(log => log.logId === logIdToRemove);
+    if (!logToRemove) return;
+
+    setLogs(prevLogs => prevLogs.filter(log => log.logId !== logIdToRemove));
+    // Get the IDs of items that were in the cleared log
+    const itemIdsToUnlog = new Set(logToRemove.items.map(item => item.id));
+    // Remove these item IDs from the master set of logged items
+    setLoggedItemIds(prevLoggedIds => {
+      const newLoggedIds = new Set(prevLoggedIds);
+      itemIdsToUnlog.forEach(id => newLoggedIds.delete(id));
+      return newLoggedIds;
+    });
+  };
+
   const handleSubmitToAirtable = async () => {
     if (logs.length === 0) {
       alert('No logs to submit.');
@@ -203,6 +218,28 @@ export default function OperationPage() {
     </ul>
   );
 
+  const LogList = () => (
+    <ul className="space-y-3">
+      {logs.map(log => (
+        <li key={log.logId} className="text-sm bg-gray-50 p-2 rounded flex justify-between items-start">
+          <div>
+            <strong>Pallet: {log.pallet.id}</strong>
+            <ul className="list-disc list-inside pl-4 font-mono">
+            {log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}
+            </ul>
+          </div>
+          <button
+            onClick={() => handleClearLog(log.logId)}
+            className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
+            aria-label={`Clear log for pallet ${log.pallet.id}`}
+          >
+            &times;
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+
   return (
     <>
       {/* --- Desktop Layout --- */}
@@ -248,20 +285,13 @@ export default function OperationPage() {
           </div>
         </main>
         <footer className="bg-white shadow-up p-4 h-1/3 flex flex-col gap-4">
-          <div className="flex-grow flex gap-4 overflow-hidden">
-            <div className="w-1/3 border rounded-lg p-4 flex flex-col overflow-y-auto">
-              <h3 className="font-semibold text-lg mb-2">Current Session</h3>
-              <div className="mb-2"><strong>Scanned Pallet: </strong><span className="font-mono">{currentPallet?.id || 'None'}</span></div>
-              <div className="mb-2 font-semibold">Selected Items ({selectedItemIds.size}):</div>
-              <div className="flex-grow overflow-y-auto"><SelectedItemsList /></div>
-              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400 mt-2">Add to Log</button>
-            </div>
-            <div className="flex-grow border rounded-lg p-4 overflow-y-auto">
-              <h3 className="font-semibold text-lg mb-2">Session Logs ({logs.length})</h3>
-              <ul className="space-y-3">{logs.map(log => (<li key={log.logId} className="text-sm bg-gray-50 p-2 rounded"><strong>Pallet: {log.pallet.id}</strong><ul className="list-disc list-inside pl-4 font-mono">{log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}</ul></li>))}</ul>
+          <div className="flex-grow border rounded-lg p-4 overflow-y-auto">
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">3. Session Logs ({logs.length})</h2>
+            <div className="flex-grow overflow-y-auto"><LogList /></div>
+            <div className="border-t pt-4 mt-auto">
+              <button onClick={handleSubmitToAirtable} disabled={logs.length === 0 || isSubmitting} className="w-full bg-green-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">{isSubmitting ? 'Submitting...' : `Submit All Logs`}</button>
             </div>
           </div>
-          <button onClick={handleSubmitToAirtable} disabled={logs.length === 0 || isSubmitting} className="w-full bg-green-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">{isSubmitting ? 'Submitting...' : `Submit All Logs`}</button>
         </footer>
       </div>
 
