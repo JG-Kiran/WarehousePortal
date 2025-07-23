@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 
 type Item = {
   id: string; // Airtable record ID
@@ -45,13 +46,6 @@ export default function OperationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'scan' | 'logs'>('scan');
-
-  const getDisplayValue = (value: any): string => {
-    if (typeof value === 'object' && value !== null && value.text) {
-      return value.text;
-    }
-    return String(value || '');
-  };
 
   // --- Data Fetching for Items ---
   useEffect(() => {
@@ -196,6 +190,13 @@ export default function OperationPage() {
       setIsSubmitting(false);
     }
   };
+
+  const getDisplayValue = (value: any): string => {
+    if (typeof value === 'object' && value !== null && value.text) {
+      return value.text;
+    }
+    return String(value || '');
+  };
   
   // --- Render Logic ---
   if (loading) return <div className="text-center p-10">Loading...</div>;
@@ -244,8 +245,14 @@ export default function OperationPage() {
     <>
       {/* --- Desktop Layout --- */}
       <div className="hidden md:flex flex-col h-screen bg-gray-100 text-black">
-        <header className="bg-white shadow-md p-4 text-center">
+      <header className="bg-white shadow-md p-4 flex justify-between items-center">
+          {/* Back Button */}
+          <Link href="/dashboard" className="bg-gray-200 text-black px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">
+            &larr; Back to Dashboard
+          </Link>
           <h1 className="text-2xl font-bold">Operation: {operationId}</h1>
+          {/* This empty div helps center the title */}
+          <div style={{ width: '190px' }}></div> 
         </header>
         <main className="flex-grow flex p-4 gap-4 overflow-hidden">
           {/* Left Panel for Pallet and Actions */}
@@ -297,7 +304,13 @@ export default function OperationPage() {
 
       {/* --- Mobile Layout --- */}
       <div className="md:hidden flex flex-col h-screen bg-gray-100 text-black">
-        <header className="bg-white shadow p-4 text-center"><h1 className="text-xl font-bold">Op: {operationId}</h1></header>
+        <header className="bg-white shadow p-4 flex justify-between items-center">
+          <Link href="/dashboard" className="text-sm bg-gray-200 text-black px-3 py-1 rounded font-semibold hover:bg-gray-300 transition">
+            &larr; Back
+          </Link>
+          <h1 className="text-lg font-bold">Op: {operationId}</h1>
+          <div style={{ width: '68px' }}></div>
+        </header>
         <main className="flex-grow p-4 overflow-y-auto">
           {activeTab === 'scan' && (
             <div>
