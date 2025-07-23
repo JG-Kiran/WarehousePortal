@@ -64,7 +64,7 @@ export async function getItemsForOperation(operationId: string) {
   }
 }
 
-export async function updateItemsAndOperation(operationId: string, logs: LogEntry[]) {
+export async function updateItems(logs: LogEntry[]) {
   try {
     const itemUpdates = logs.flatMap(log => 
       log.items.map(item => ({
@@ -82,24 +82,7 @@ export async function updateItemsAndOperation(operationId: string, logs: LogEntr
       const chunk = itemUpdates.slice(i, i + 10);
       await base('Item').update(chunk as any);
     }
-
-    // Finally, update the operation status.
-    const operationRecords = await base('Operations').select({
-        filterByFormula: `{Operation ID} = '${operationId}'`,
-        maxRecords: 1
-    }).firstPage();
-
-    if (operationRecords.length > 0) {
-        const operationRecordId = operationRecords[0].id;
-        await base('Operations').update([
-            {
-                id: operationRecordId,
-                fields: { 'Status': 'In Storage' }
-            }
-        ]);
-    } else {
-        throw new Error(`Operation with ID ${operationId} not found.`);
-    }
+    console.log("Item update works");
 
   } catch (err) {
     console.error('Error in batch update to Airtable:', err);

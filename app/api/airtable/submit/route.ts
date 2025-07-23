@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateItemsAndOperation } from '@/app/lib/airtableClient';
+import { updateItems } from '@/app/lib/airtableClient';
 
-export async function POST(request: NextRequest) {
-  const operationId = request.nextUrl.searchParams.get('operationId');
-
-  if (!operationId) {
-    return NextResponse.json({ error: 'Missing operationId query parameter' }, { status: 400 });
-  }
-  
+export async function POST(request: NextRequest) {  
   try {
     const { logs } = await request.json();
     if (!logs || !Array.isArray(logs) || logs.length === 0) {
       return NextResponse.json({ error: 'Missing or invalid logs' }, { status: 400 });
     }
 
-    await updateItemsAndOperation(operationId, logs);
+    await updateItems(logs);
     
     return NextResponse.json({ success: true, message: 'Operation and items updated successfully.' });
 

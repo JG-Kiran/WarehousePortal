@@ -159,7 +159,7 @@ export default function OperationPage() {
     // Then, remove the log as if it were being cleared
     handleClearLog(logIdToEdit);
   };
-  
+
   const handleClearLog = (logIdToRemove: string) => {
     const logToRemove = logs.find(log => log.logId === logIdToRemove);
     if (!logToRemove) return;
@@ -185,7 +185,7 @@ export default function OperationPage() {
     setError('');
 
     try {
-      const res = await fetch(`/api/airtable/submit?operationId=${operationId}`, {
+      const res = await fetch('/api/airtable/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logs }),
