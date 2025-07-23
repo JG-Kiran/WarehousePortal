@@ -326,7 +326,7 @@ export default function OperationPage() {
           {activeTab === 'logs' && (
             <div className="bg-white rounded-lg shadow p-4">
               <h2 className="text-lg font-semibold mb-2">Review Logs ({logs.length})</h2>
-              <ul className="space-y-3">{logs.map(log => (<li key={log.logId} className="text-sm bg-gray-50 p-2 rounded"><strong>Pallet: {log.pallet.id}</strong><ul className="list-disc list-inside pl-4 font-mono">{log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}</ul></li>))}</ul>
+              <div className="overflow-y-auto"><LogList /></div>
               <button onClick={handleSubmitToAirtable} disabled={logs.length === 0 || isSubmitting} className="w-full bg-green-600 text-white rounded py-3 font-semibold disabled:bg-gray-400 mt-4">{isSubmitting ? 'Submitting...' : `Submit All Logs`}</button>
             </div>
           )}
