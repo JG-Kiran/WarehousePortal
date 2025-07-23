@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getItemsForOperation } from '@/app/lib/airtableClient';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { operationId: string } }
 ) {
   const { operationId } = params;
