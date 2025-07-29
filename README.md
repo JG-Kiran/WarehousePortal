@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Portal
+
+A Next.js portal for warehouse agents to log items and pallets using barcode scanning, manage session logs, and sync data with Airtable.
+
+## Features
+- **Agent Dashboard**: Search and select operations by Operation ID.
+- **Barcode Scanning**: Scan item and pallet barcodes using a scanner or manual entry.
+- **Session Logging**: Add, edit, and clear logs of items assigned to pallets before submitting.
+- **Airtable Integration**: All item and pallet data is fetched from and submitted to Airtable.
+- **Responsive UI**: Optimized for both desktop and mobile use.
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up environment variables
+
+Create a `.env.local` file in the project root with the following:
+
+```
+AIRTABLE_API_KEY=your_airtable_api_key
+AIRTABLE_BASE_ID=your_airtable_base_id
+```
+
+### 3. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to access the portal.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Login**: (If authentication is enabled; otherwise, you are taken directly to the dashboard.)
+2. **Dashboard**: Search for an operation by typing its Operation ID. Select an operation to begin logging.
+3. **Operation Page**:
+   - **Scan Items**: Scan item barcodes to select them for the current pallet.
+   - **Scan Pallet**: Scan a pallet barcode or add it manually. If the scanned barcode does not belong to any displayed items, it will taken to be a pallet.
+   - **Add to Log**: Assign selected items to the scanned pallet and add to the session log.
+   - **Edit/Clear Logs**: Edit or remove logs before submitting.
+   - **Submit Logs**: Submit all session logs to Airtable. Items are updated with their new pallet and status.
 
-## Learn More
+## API Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+- `GET /api/airtable/operations` — List all operations with status 'On the way'.
+- `GET /api/airtable/items?operationId=...` — List all items for a given operation.
+- `POST /api/airtable/submit` — Submit logs. Body: `{ logs: LogEntry[] }`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
+- [Next.js](https://nextjs.org/) (App Router)
+- [React](https://react.dev/)
+- [Airtable](https://airtable.com/developers/web/api/introduction)
+- [Tailwind CSS](https://tailwindcss.com/)
+- TypeScript
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development
+- All code is in the `app/` directory.
+- Styles are managed with Tailwind CSS (`app/globals.css`).
+- API routes are in `app/api/airtable/`.
+- Main agent workflow is in `app/operations/[operationId]/page.tsx`.
 
-## Deploy on Vercel
+## Contributing
+- Use `npm run dev` for local development.
+- TypeScript strict mode is enabled.
+- See `tsconfig.json` for project config.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+MIT
