@@ -6,9 +6,12 @@ export default async function OutgoingDashboardPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 text-black">
-      <h1 className="text-2xl font-bold mb-4 text-center">Incoming Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">Outgoing Dashboard</h1>
       <p className="text-center mb-6">Find an incoming operation by typing its ID.</p>
-      <DashboardClient initialOperations={operations} />
+      <DashboardClient 
+        initialOperations={operations} 
+        basePath="/operations/outgoing" 
+      />
     </main>
   );
 }

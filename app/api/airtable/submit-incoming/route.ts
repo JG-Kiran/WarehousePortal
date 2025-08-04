@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateItems } from '@/app/lib/airtableClient';
+import { updateIncomingItems } from '@/app/lib/airtableClient';
 
 export async function POST(request: NextRequest) {  
   try {
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid logs' }, { status: 400 });
     }
 
-    await updateItems(logs);
+    await updateIncomingItems(logs);
     
     return NextResponse.json({ success: true, message: 'Operation and items updated successfully.' });
 

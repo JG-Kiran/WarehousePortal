@@ -185,7 +185,7 @@ export default function OperationPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/airtable/submit', {
+      const res = await fetch('/api/airtable/submit-incoming', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logs }),

@@ -116,7 +116,7 @@ export async function getItemsForOperation(operationId: string) {
   }
 }
 
-export async function updateItems(logs: LogEntry[]) {
+export async function updateIncomingItems(logs: LogEntry[]) {
   try {
     const itemUpdates = logs.flatMap(log => 
       log.items.map(item => ({
@@ -142,44 +142,27 @@ export async function updateItems(logs: LogEntry[]) {
   }
 }
 
-// Update item status by record ID
-export async function updateItemStatus(recordId: string, status: string) {
+export async function updateOutgoingItems(logs: LogEntry[]) {
   try {
-    await base('Item').update([
-      {
-        id: recordId,
+    const itemUpdates = logs.flatMap(log =>
+      log.items.map(item => ({
+        id: item.id,
         fields: {
-          'Status': status
+          'Pallet ID': { text: '' },
+          'Status': 'In transit - Outgoing',
         }
-      }
-    ]);
-    console.log(`Successfully updated item ${recordId} status to ${status}`);
-  } catch (err) {
-    console.error('Error updating item status:', err);
-    throw err;
-  }
-}
+      }))
+    );
 
-// Find item by barcode within a customer's items
-export async function findItemByBarcode(customerId: string, barcode: string): Promise<ObjectItem | null> {
-  try {
-    // Try different possible barcode field names
-    const possibleFieldNames = ['Barcode', 'Code', 'QR Code', 'Item Code', 'Barcode Number'];
-    
-    for (const fieldName of possibleFieldNames) {
-      const records = await base('Item').select({
-        filterByFormula: `AND({Customer ID} = '${customerId}', {${fieldName}} = '${barcode}')`,
-        view: 'Grid view',
-      }).all();
-      
-      if (records.length > 0) {
-        return { id: records[0].id, fields: records[0].fields };
-      }
+    // Process updates in chunks of 10
+    for (let i = 0; i < itemUpdates.length; i += 10) {
+      const chunk = itemUpdates.slice(i, i + 10);
+      await base('Item').update(chunk as any);
     }
-    
-    return null;
+    console.log("Outgoing item update successful.");
+
   } catch (err) {
-    console.error('Error finding item by barcode:', err);
+    console.error('Error in batch update for outgoing items:', err);
     throw err;
   }
 }

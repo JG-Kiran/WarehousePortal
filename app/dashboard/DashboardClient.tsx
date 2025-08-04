@@ -4,7 +4,13 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Operation } from '../lib/airtableClient';
 
-export default function DashboardClient({ initialOperations }: { initialOperations: Operation[] }) {
+export default function DashboardClient({ 
+  initialOperations, 
+  basePath 
+}: { 
+  initialOperations: Operation[];
+  basePath: '/operations/incoming' | '/operations/outgoing';
+}) {
   const [operations] = useState<Operation[]>(initialOperations);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
@@ -19,7 +25,7 @@ export default function DashboardClient({ initialOperations }: { initialOperatio
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const operationId = e.target.value;
     if (operationId) {
-      router.push(`/operations/${operationId}`);
+      router.push(`${basePath}/${operationId}`);
     }
   }
 
@@ -28,7 +34,7 @@ export default function DashboardClient({ initialOperations }: { initialOperatio
     setSearchQuery(numericValue);
   }
 
-  return (
+   return (
     <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
       <input
         type="text"
@@ -40,7 +46,7 @@ export default function DashboardClient({ initialOperations }: { initialOperatio
       <select
         className="w-full border rounded px-3 py-2 text-black"
         onChange={handleSelect}
-        value="" // Reset value to show the placeholder
+        value=""
       >
         <option value="" disabled>
           {filteredOperations.length > 0
