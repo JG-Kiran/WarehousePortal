@@ -146,7 +146,7 @@ export async function updateIncomingItems(logs: LogEntry[]) {
         id: item.id,
         fields: {
           'Pallet ID': { text: log.pallet.id}, 
-          'Status': 'In Storage'
+          'Status': 'Stored'
         }
       }))
     );
