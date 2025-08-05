@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Operation } from '../lib/airtableClient';
 
 export default function DashboardClient({ 
@@ -15,6 +16,8 @@ export default function DashboardClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
+
+  const basePath = flowType === 'incoming' ? '/operations/incoming' : '/operations/outgoing';
 
   const filteredOperations = useMemo(() => {
     if (!searchQuery) return operations;
@@ -67,8 +70,15 @@ export default function DashboardClient({
   }
 
    return (
-    <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
-      <input
+    <div className="w-full max-w-md bg-white rounded-lg shadow p-6 relative">
+      <Link 
+        href="/" 
+        className="absolute top-4 left-4 text-sm bg-gray-200 text-black px-3 py-1 rounded font-semibold hover:bg-gray-300 transition"
+      >
+        &larr; Back to Home
+      </Link>
+      <div className="mt-8">
+        <input
         type="text"
         value={searchQuery}
         onChange={handleSearchChange}
@@ -91,6 +101,7 @@ export default function DashboardClient({
           </option>
         ))}
       </select>
+      </div>
     </div>
   );
 }

@@ -102,7 +102,7 @@ export function getOutgoingOperations() {
 export async function getOTWItemsForOperation(operationId: string) {
   try {
     const records = await base('Item').select({
-      filterByFormula: `AND({Operation ID} = '${operationId}', {Status} = 'Stored')`,
+      filterByFormula: `AND({Operation ID} = '${operationId}', {Status} = 'On the way')`,
       view: 'Grid view',
     }).all();
     return records.map(record => ({ id: record.id, fields: record.fields }));
