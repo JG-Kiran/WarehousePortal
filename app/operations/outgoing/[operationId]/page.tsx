@@ -258,9 +258,9 @@ export default function OutgoingOperationPage() {
   return (
     <>
       {/* --- Desktop Layout --- */}
-      <div className="hidden md:flex flex-col h-screen">
+      <div className="hidden md:flex flex-col h-screen bg-gray-100 text-black">
         <header className="bg-white shadow-md p-4 flex justify-between items-center">
-          {/* THE KEY CHANGE: Link back to the outgoing dashboard */}
+          {/* Back Button */}
           <Link href="/dashboard/outgoing" className="bg-gray-200 text-black px-4 py-2 rounded font-semibold hover:bg-gray-300">
             &larr; Back to Outgoing Dashboard
           </Link>

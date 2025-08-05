@@ -272,10 +272,10 @@ export default function OperationPage() {
     <>
       {/* --- Desktop Layout --- */}
       <div className="hidden md:flex flex-col h-screen bg-gray-100 text-black">
-      <header className="bg-white shadow-md p-4 flex justify-between items-center">
+        <header className="bg-white shadow-md p-4 flex justify-between items-center">
           {/* Back Button */}
-          <Link href="/dashboard" className="bg-gray-200 text-black px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">
-            &larr; Back to Dashboard
+          <Link href="/dashboard/incoming" className="bg-gray-200 text-black px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">
+            &larr; Back to Incoming Dashboard
           </Link>
           <h1 className="text-2xl font-bold">Operation: {operationId}</h1>
           {/* This empty div helps center the title */}
