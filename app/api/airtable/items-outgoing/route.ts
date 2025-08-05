@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getItemsForOperation } from '@/app/lib/airtableClient';
+import { getStoredItemsForCustomer } from '@/app/lib/airtableClient';
 
 export async function GET(request: NextRequest) {
-  const operationId = request.nextUrl.searchParams.get('operationId');
+  const customerId = request.nextUrl.searchParams.get('customerId');
 
-  if (!operationId) {
-    return NextResponse.json({ error: 'Missing operationId query parameter' }, { status: 400 });
+  if (!customerId) {
+    return NextResponse.json({ error: 'Missing customerId query parameter' }, { status: 400 });
   }
 
   try {
-    const items = await getItemsForOperation(operationId);
+    const items = await getStoredItemsForCustomer(customerId);
     return NextResponse.json({ items });
   } catch (error) {
     console.error('Failed to fetch items:', error);

@@ -10,7 +10,7 @@ export default async function IncomingDashboardPage() {
       <p className="text-center mb-6">Find an incoming operation by typing its ID.</p>
       <DashboardClient 
         initialOperations={operations} 
-        basePath="/operations/incoming" 
+        flowType='incoming' 
       />
     </main>
   );

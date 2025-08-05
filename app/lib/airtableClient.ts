@@ -25,7 +25,7 @@ export type LogEntry = {
 };
 
 // Fetch all items for a given customerId
-export async function getObjectsForCustomer(customerId: string): Promise<ObjectItem[]> {
+export async function getItemsForCustomer(customerId: string): Promise<ObjectItem[]> {
   try {
     const records = await base('Item').select({
       filterByFormula: `{Customer ID} = '${customerId}'`,
@@ -55,10 +55,11 @@ export type OperationFields = {
   'Operation ID': string;
   'Name'?: string; // Add any other fields you use, mark optional with '?'
   'Type': 'Incoming' | 'Outgoing';
-  // Add other fields from your 'operation' table here
+  'Customer ID'?: readonly string[];
+  'Items OTW Count'?: number;
+  'Items Stored Count'?: number;
 }
 
-// --- Define the final Operation type ---
 export type Operation = {
   id: string;
   fields: OperationFields;
@@ -76,6 +77,7 @@ async function getOperationsByType(type: 'Incoming' | 'Outgoing'): Promise<Opera
     const records = await base('operation').select({
       filterByFormula: finalFilter,
       view: 'Grid view',
+      fields: ['Operation ID', 'Name', 'Type', 'Customer ID', 'Items OTW Count', 'Items Stored Count'],
     }).all();
 
     return records.map(record => ({
@@ -97,15 +99,42 @@ export function getOutgoingOperations() {
   return getOperationsByType('Outgoing');
 }
 
-export async function getItemsForOperation(operationId: string) {
+export async function getOTWItemsForOperation(operationId: string) {
   try {
     const records = await base('Item').select({
-      filterByFormula: `{Operation ID} = '${operationId}'`,
+      filterByFormula: `AND({Operation ID} = '${operationId}', {Status} = 'Stored')`,
       view: 'Grid view',
     }).all();
     return records.map(record => ({ id: record.id, fields: record.fields }));
   } catch (err) {
     console.error('Error fetching items for operation:', err);
+    throw err;
+  }
+}
+
+export async function getCustomerByRecordId(recordId: string) {
+  try {
+    const record = await base('customer').find(recordId);
+    return {
+      id: record.id,
+      name: record.get('Name'),
+      customerId: record.get('Customer ID'),
+    };
+  } catch (error) {
+    console.error('Error fetching customer by record ID:', error);
+    throw error;
+  }
+}
+
+export async function getStoredItemsForCustomer(customerId: string) {
+  try {
+    const records = await base('Item').select({
+      filterByFormula: `AND({Customer ID} = '${customerId}', {Status} = 'Stored')`,
+      view: 'Grid view',
+    }).all();
+    return records.map(record => ({ id: record.id, fields: record.fields }));
+  } catch (err) {
+    console.error('Error fetching stored items for customer:', err);
     throw err;
   }
 }

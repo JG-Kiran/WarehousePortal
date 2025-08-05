@@ -54,7 +54,7 @@ export default function OperationPage() {
       setLoading(true);
       setError('');
       try {
-        const itemsRes = await fetch(`/api/airtable/items?operationId=${operationId}`);
+        const itemsRes = await fetch(`/api/airtable/items-incoming?operationId=${operationId}`);
         if (!itemsRes.ok) throw new Error('Failed to fetch items for operation.');
         const itemsData = await itemsRes.json();
         setItems(itemsData.items);

@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import type { Operation } from '../lib/airtableClient';
 
 export default function DashboardClient({ 
-  initialOperations, 
-  basePath 
+  initialOperations,
+  flowType 
 }: { 
   initialOperations: Operation[];
-  basePath: '/operations/incoming' | '/operations/outgoing';
+  flowType: 'incoming' | 'outgoing';
 }) {
   const [operations] = useState<Operation[]>(initialOperations);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
 
   const filteredOperations = useMemo(() => {
@@ -22,10 +23,41 @@ export default function DashboardClient({
     );
   }, [searchQuery, operations]);
 
-  function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    const operationId = e.target.value;
-    if (operationId) {
-      router.push(`${basePath}/${operationId}`);
+  async function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const selectedOperationRecordId = e.target.value;
+    const selectedOperation = operations.find(op => op.id === selectedOperationRecordId);
+    
+    if (!selectedOperation) return;
+
+    const operationId = selectedOperation.fields['Operation ID'];
+
+    if (flowType === 'incoming') {
+      router.push(`/operations/incoming/${operationId}`);
+
+    } else {
+      const customerRecordId = selectedOperation.fields['Customer ID']?.[0];
+      
+      if (!customerRecordId) {
+        alert('Error: This outgoing operation is not linked to a customer.');
+        return;
+      }
+      
+      setIsNavigating(true);
+      try {
+        const res = await fetch(`/api/airtable/customers?customerRecordId=${customerRecordId}`);
+        if (!res.ok) throw new Error('Customer lookup failed.');
+        const { customer } = await res.json();
+        
+        if (customer && customer.customerId) {
+          router.push(`/operations/outgoing/${operationId}/customer/${customer.customerId}`);
+        } else {
+          throw new Error('Customer custom ID not found.');
+        }
+
+      } catch (error) {
+        alert('An error occurred while finding the customer.');
+        setIsNavigating(false);
+      }
     }
   }
 
@@ -47,15 +79,14 @@ export default function DashboardClient({
         className="w-full border rounded px-3 py-2 text-black"
         onChange={handleSelect}
         value=""
+        disabled={isNavigating}
       >
         <option value="" disabled>
-          {filteredOperations.length > 0
-            ? `Select from ${filteredOperations.length} matching operations...`
-            : "No operations found."
-          }
+          {isNavigating ? 'Loading...' : `Select from ${filteredOperations.length} operations...`}
         </option>
         {filteredOperations.map(op => (
-          <option key={op.id} value={op.fields['Operation ID']}>
+          // Use the Airtable Record ID as the value for easy lookup
+          <option key={op.id} value={op.id}>
             {op.fields['Operation ID']}
           </option>
         ))}

@@ -18,12 +18,13 @@ type Item = {
 type Pallet = { id: string };
 type LogEntry = { logId: string; pallet: Pallet; items: Item[] };
 
-// --- Main Component ---
-export default function OutgoingOperationPage() {
-  const { operationId } = useParams() as { operationId: string };
-  const [items, setItems] = useState<Item[]>([]);
+export default function OutgoingCustomerPage() {
+  const { operationId, customerId } = useParams() as { operationId: string, customerId: string };
+  
+  const [itemsToScan, setItemsToScan] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [currentPallet, setCurrentPallet] = useState<Pallet | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -34,222 +35,223 @@ export default function OutgoingOperationPage() {
   const [activeTab, setActiveTab] = useState<'scan' | 'logs'>('scan');
 
   useEffect(() => {
-    async function fetchItems() {
-      if (!operationId) return;
+    async function fetchCustomerItems() {
+      if (!customerId) return;
       setLoading(true);
+      setError('');
       try {
-        const res = await fetch(`/api/airtable/items-outgoing?operationId=${operationId}`);
-        if (!res.ok) throw new Error('Failed to fetch items.');
+        const res = await fetch(`/api/airtable/items-outgoing?customerId=${customerId}`);
+        if (!res.ok) throw new Error('Failed to fetch customer items.');
         const data = await res.json();
-        setItems(data.items);
+        setItemsToScan(data.items);
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     }
-    fetchItems();
-  }, [operationId]);
+    fetchCustomerItems();
+  }, [customerId]);
 
   // --- Barcode Scanner Listener ---
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      const currentTime = Date.now();
-      if (event.key === 'Enter') {
-        const scannedBarcode = barcodeBuffer.trim();
-        if (scannedBarcode) {
-          handleBarcodeScanned(scannedBarcode);
-          setBarcodeBuffer('');
+    useEffect(() => {
+      const handleKeyPress = (event: KeyboardEvent) => {
+        const currentTime = Date.now();
+        if (event.key === 'Enter') {
+          const scannedBarcode = barcodeBuffer.trim();
+          if (scannedBarcode) {
+            handleBarcodeScanned(scannedBarcode);
+            setBarcodeBuffer('');
+          }
+          return;
+        }
+        if (currentTime - lastKeyTime > 100) {
+          setBarcodeBuffer(event.key);
+        } else {
+          setBarcodeBuffer(prev => prev + event.key);
+        }
+        setLastKeyTime(currentTime);
+      };
+  
+      window.addEventListener('keypress', handleKeyPress);
+      return () => window.removeEventListener('keypress', handleKeyPress);
+    }, [barcodeBuffer, lastKeyTime, itemsToScan]);
+  
+    // --- Event Handlers ---
+    const handleBarcodeScanned = (barcode: string) => {
+      // Check if it's an item first
+      const foundItem = itemsToScan.find(item => item.fields['Barcode'].text === barcode);
+      if (foundItem) {
+        if (!loggedItemIds.has(foundItem.id)) {
+          setSelectedItemIds(prev => {
+            const newSet = new Set(prev);
+            newSet.add(foundItem.id);
+            return newSet;
+          });
         }
         return;
       }
-      if (currentTime - lastKeyTime > 100) {
-        setBarcodeBuffer(event.key);
-      } else {
-        setBarcodeBuffer(prev => prev + event.key);
-      }
-      setLastKeyTime(currentTime);
+      // If not an item, assume it's a pallet and replace the current one
+      console.log(`Pallet with barcode ${barcode} scanned.`);
+      setCurrentPallet({ id: barcode });
     };
-
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
-  }, [barcodeBuffer, lastKeyTime, items]);
-
-
-   // --- Event Handlers ---
-  const handleBarcodeScanned = (barcode: string) => {
-    // Check if it's an item first
-    const foundItem = items.find(item => item.fields['Barcode'].text === barcode);
-    if (foundItem) {
-      if (!loggedItemIds.has(foundItem.id)) {
-        setSelectedItemIds(prev => {
-          const newSet = new Set(prev);
-          newSet.add(foundItem.id);
-          return newSet;
-        });
-      }
-      return;
-    }
-    // If not an item, assume it's a pallet and replace the current one
-    console.log(`Pallet with barcode ${barcode} scanned.`);
-    setCurrentPallet({ id: barcode });
-  };
-  
-  const handleUnselectItem = (itemIdToUnselect: string) => {
-    setSelectedItemIds(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(itemIdToUnselect);
-      return newSet;
-    });
-  };
-
-  const handleAddPalletClick = () => {
-    const palletBarcode = prompt("Scanner not detected. Please enter pallet barcode manually:");
-    if (palletBarcode) {
-        handleBarcodeScanned(palletBarcode);
-    }
-  };
-
-  const handleAddLog = () => {
-    if (selectedItemIds.size === 0 || !currentPallet) {
-      alert('Please select at least one item and scan a pallet.');
-      return;
-    }
-
-    const selectedItems = items.filter(item => selectedItemIds.has(item.id));
-
-    const newLog: LogEntry = {
-      logId: `log-${Date.now()}`,
-      pallet: currentPallet,
-      items: selectedItems,
-    };
-    setLogs(prev => [newLog, ...prev]);
-
-    setLoggedItemIds(prev => new Set([...prev, ...selectedItemIds]));
-    setSelectedItemIds(new Set());
-  };
-
-  const handleEditLog = (logIdToEdit: string) => {
-    if (selectedItemIds.size > 0) {
-        alert('Please log your currently selected items before editing another log.');
-        return;
-    }
-    const logToEdit = logs.find(log => log.logId === logIdToEdit);
-    if (!logToEdit) return;
-
-    // Restore the pallet and selected items
-    setCurrentPallet(logToEdit.pallet);
-    setSelectedItemIds(new Set(logToEdit.items.map(item => item.id)));
-
-    // Then, remove the log as if it were being cleared
-    handleClearLog(logIdToEdit);
-  };
-
-  const handleClearLog = (logIdToRemove: string) => {
-    const logToRemove = logs.find(log => log.logId === logIdToRemove);
-    if (!logToRemove) return;
-
-    setLogs(prevLogs => prevLogs.filter(log => log.logId !== logIdToRemove));
-    // Get the IDs of items that were in the cleared log
-    const itemIdsToUnlog = new Set(logToRemove.items.map(item => item.id));
-    // Remove these item IDs from the master set of logged items
-    setLoggedItemIds(prevLoggedIds => {
-      const newLoggedIds = new Set(prevLoggedIds);
-      itemIdsToUnlog.forEach(id => newLoggedIds.delete(id));
-      return newLoggedIds;
-    });
-  };
-
-
-  const handleSubmitToAirtable = async () => {
-    if (logs.length === 0) return alert('No logs to submit.');
-    setIsSubmitting(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/airtable/submit-outgoing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logs }),
+    
+    const handleUnselectItem = (itemIdToUnselect: string) => {
+      setSelectedItemIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemIdToUnselect);
+        return newSet;
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to submit.');
+    };
+  
+    const handleAddPalletClick = () => {
+      const palletBarcode = prompt("Scanner not detected. Please enter pallet barcode manually:");
+      if (palletBarcode) {
+          handleBarcodeScanned(palletBarcode);
       }
-      
-      alert('Successfully submitted to Airtable!');
-      setLogs([]);
-      // You might want to refetch items here to show their new status
-      
-    } catch (err: any) {
-      setError(err.message);
-      alert(`Error: ${err.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const getDisplayValue = (value: any): string => {
-    if (typeof value === 'object' && value !== null && value.text) {
-      return value.text;
-    }
-    return String(value || '');
-  };
-
-  // --- Render Logic ---
-  if (loading) return <div className="text-center p-10">Loading...</div>;
-  if (error) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
-
-  const SelectedItemsList = () => (
-    <ul className="text-sm list-none font-mono pr-2">
-      {items.filter(i => selectedItemIds.has(i.id)).map(i => (
-        <li key={i.id} className="flex justify-between items-center bg-gray-100 mb-1 p-1 rounded">
-          <span>{getDisplayValue(i.fields['Barcode'])}</span>
-          <button 
-            onClick={() => handleUnselectItem(i.id)}
-            className="text-red-500 font-bold px-2 rounded hover:bg-red-100"
-            aria-label={`Remove item ${getDisplayValue(i.fields['Barcode'])}`}
-          >
-            &times;
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const LogList = () => (
-    <ul className="space-y-3">
-      {logs.map(log => (
-        <li key={log.logId} className="text-sm bg-gray-50 p-2 rounded flex justify-between items-start">
-          <div>
-            <strong>Pallet: {log.pallet.id}</strong>
-            <ul className="list-disc list-inside pl-4 font-mono">
-            {log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}
-            </ul>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Edit button */}
+    };
+  
+    const handleAddLog = () => {
+      if (selectedItemIds.size === 0 || !currentPallet) {
+        alert('Please select at least one item and scan a pallet.');
+        return;
+      }
+  
+      const selectedItems = itemsToScan.filter(item => selectedItemIds.has(item.id));
+  
+      const newLog: LogEntry = {
+        logId: `log-${Date.now()}`,
+        pallet: currentPallet,
+        items: selectedItems,
+      };
+      setLogs(prev => [newLog, ...prev]);
+  
+      setLoggedItemIds(prev => new Set([...prev, ...selectedItemIds]));
+      setSelectedItemIds(new Set());
+    };
+  
+    const handleEditLog = (logIdToEdit: string) => {
+      if (selectedItemIds.size > 0) {
+          alert('Please log your currently selected items before editing another log.');
+          return;
+      }
+      const logToEdit = logs.find(log => log.logId === logIdToEdit);
+      if (!logToEdit) return;
+  
+      // Restore the pallet and selected items
+      setCurrentPallet(logToEdit.pallet);
+      setSelectedItemIds(new Set(logToEdit.items.map(item => item.id)));
+  
+      // Then, remove the log as if it were being cleared
+      handleClearLog(logIdToEdit);
+    };
+  
+    const handleClearLog = (logIdToRemove: string) => {
+      const logToRemove = logs.find(log => log.logId === logIdToRemove);
+      if (!logToRemove) return;
+  
+      setLogs(prevLogs => prevLogs.filter(log => log.logId !== logIdToRemove));
+      // Get the IDs of items that were in the cleared log
+      const itemIdsToUnlog = new Set(logToRemove.items.map(item => item.id));
+      // Remove these item IDs from the master set of logged items
+      setLoggedItemIds(prevLoggedIds => {
+        const newLoggedIds = new Set(prevLoggedIds);
+        itemIdsToUnlog.forEach(id => newLoggedIds.delete(id));
+        return newLoggedIds;
+      });
+    };
+  
+  
+    const handleSubmitToAirtable = async () => {
+      if (logs.length === 0) return alert('No logs to submit.');
+      setIsSubmitting(true);
+      setError('');
+  
+      try {
+        // THE KEY CHANGE: Call the new API route for outgoing items
+        const res = await fetch('/api/airtable/submit-outgoing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ logs }),
+        });
+  
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to submit.');
+        }
+        
+        alert('Successfully submitted to Airtable!');
+        setLogs([]);
+        // You might want to refetch items here to show their new status
+        
+      } catch (err: any) {
+        setError(err.message);
+        alert(`Error: ${err.message}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+  
+    const getDisplayValue = (value: any): string => {
+      if (typeof value === 'object' && value !== null && value.text) {
+        return value.text;
+      }
+      return String(value || '');
+    };
+  
+    // --- Render Logic ---
+    if (loading) return <div className="text-center p-10">Loading...</div>;
+    if (error) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
+  
+    const SelectedItemsList = () => (
+      <ul className="text-sm list-none font-mono pr-2">
+        {itemsToScan.filter(i => selectedItemIds.has(i.id)).map(i => (
+          <li key={i.id} className="flex justify-between items-center bg-gray-100 mb-1 p-1 rounded">
+            <span>{getDisplayValue(i.fields['Barcode'])}</span>
             <button 
-              onClick={() => handleEditLog(log.logId)}
-              className="bg-blue-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-blue-600 text-xs"
-              aria-label={`Edit log for pallet ${log.pallet.id}`}
-            >
-              &#9998; {/* Pencil icon */}
-            </button>
-            {/* Delete button */}
-            <button 
-              onClick={() => handleClearLog(log.logId)}
-              className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
-              aria-label={`Clear log for pallet ${log.pallet.id}`}
+              onClick={() => handleUnselectItem(i.id)}
+              className="text-red-500 font-bold px-2 rounded hover:bg-red-100"
+              aria-label={`Remove item ${getDisplayValue(i.fields['Barcode'])}`}
             >
               &times;
             </button>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
+          </li>
+        ))}
+      </ul>
+    );
+  
+    const LogList = () => (
+      <ul className="space-y-3">
+        {logs.map(log => (
+          <li key={log.logId} className="text-sm bg-gray-50 p-2 rounded flex justify-between items-start">
+            <div>
+              <strong>Pallet: {log.pallet.id}</strong>
+              <ul className="list-disc list-inside pl-4 font-mono">
+              {log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}
+              </ul>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Edit button */}
+              <button 
+                onClick={() => handleEditLog(log.logId)}
+                className="bg-blue-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-blue-600 text-xs"
+                aria-label={`Edit log for pallet ${log.pallet.id}`}
+              >
+                &#9998; {/* Pencil icon */}
+              </button>
+              {/* Delete button */}
+              <button 
+                onClick={() => handleClearLog(log.logId)}
+                className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
+                aria-label={`Clear log for pallet ${log.pallet.id}`}
+              >
+                &times;
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
 
   return (
     <>
@@ -260,7 +262,7 @@ export default function OutgoingOperationPage() {
           <Link href="/dashboard/outgoing" className="bg-gray-200 text-black px-4 py-2 rounded font-semibold hover:bg-gray-300">
             &larr; Back to Outgoing Dashboard
           </Link>
-          <h1 className="text-2xl font-bold">Outgoing Operation: {operationId}</h1>
+          <h1 className="text-2xl font-bold">Customer: {customerId}</h1>
           <div style={{ width: '250px' }}></div> 
         </header>
         <main className="flex-grow flex p-4 gap-4 overflow-hidden">
@@ -290,7 +292,7 @@ export default function OutgoingOperationPage() {
             <div className="bg-white rounded-lg shadow p-4 flex-grow flex flex-col overflow-y-auto">
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">3. Scan Items for Operation</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {items.map(item => {
+                {itemsToScan.map(item => {
                   const isSelected = selectedItemIds.has(item.id);
                   const isLogged = loggedItemIds.has(item.id);
                   const barcodeValue = getDisplayValue(item.fields['Barcode']);
@@ -337,7 +339,7 @@ export default function OutgoingOperationPage() {
               <div className="bg-white rounded-lg shadow p-4">
                 <h2 className="text-lg font-semibold mb-2">3. Scan Items</h2>
                 <div className="grid grid-cols-3 gap-2">
-                  {items.map(item => {
+                  {itemsToScan.map(item => {
                     const isSelected = selectedItemIds.has(item.id);
                     const isLogged = loggedItemIds.has(item.id);
                     const barcodeValue = getDisplayValue(item.fields['Barcode']);
