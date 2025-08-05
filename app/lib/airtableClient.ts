@@ -65,30 +65,24 @@ export type Operation = {
 };
 
 async function getOperationsByType(type: 'Incoming' | 'Outgoing'): Promise<Operation[]> {
-  const allRecords: any[] = [];
-  let formula = '';
+  const countField = type === 'Incoming' ? '{Items OTW Count}' : '{Items Stored Count}';
+  const typeFilter = type === 'Incoming'
+    ? "OR({Type} = 'BA-In', {Type} = 'BC')"
+    : "OR({Type} = 'BA-Out', {Type} = 'RR')";
 
-  if (type === 'Incoming') {
-    formula = "OR({Type} = 'BA-In', {Type} = 'BC')";
-  } else if (type === 'Outgoing') {
-    formula = "OR({Type} = 'BA-Out', {Type} = 'RR')";
-  } else {
-    return [];
-  }
+  const finalFilter = `AND(${countField} > 0, ${typeFilter})`;
 
   try {
-    const records = await base('Operation').select({
-      filterByFormula: `OR(
-      {Type} = '${type === 'Incoming' ? 'BA-In' : 'BA-Out'}', 
-      {Type} = '${type === 'Incoming' ? 'BC' : 'RR'}')`,
+    const records = await base('operation').select({
+      filterByFormula: finalFilter,
       view: 'Grid view',
     }).all();
 
-    // Map and cast the records to your specific Operation type
     return records.map(record => ({
       id: record.id,
       fields: record.fields as OperationFields,
     }));
+
   } catch (err) {
     console.error(`Error fetching ${type} operations:`, err);
     throw err;
