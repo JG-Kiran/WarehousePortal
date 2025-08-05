@@ -284,7 +284,7 @@ export default function OperationPage() {
         <main className="flex-grow flex p-4 gap-4 overflow-hidden">
           {/* Left Panel for Pallet and Actions */}
           <div className="w-1/4 bg-white rounded-lg shadow p-4 flex flex-col">
-            <h2 className="text-lg font-semibold mb-3 border-b pb-2">1. Pallet & Actions</h2>
+            <h2 className="text-lg font-semibold mb-3 border-b pb-2">Pallet & Actions</h2>
             <div className="mb-4">
               <h3 className="font-semibold">Scanned Pallet</h3>
               {currentPallet ? <div className="p-2 mt-1 rounded border bg-blue-100 text-center"><span className="font-bold text-lg font-mono">{currentPallet.id}</span></div> : <div className="text-center text-gray-500 pt-2">Scan a pallet.</div>}
@@ -299,14 +299,14 @@ export default function OperationPage() {
           <div className="flex-grow flex flex-col gap-4 overflow-hidden">
             {/* Selected Items Panel (Top Right) */}
             <div className="bg-white rounded-lg shadow p-4 flex flex-col h-1/3">
-              <h2 className="text-lg font-semibold mb-2 border-b pb-2">2. Selected Items ({selectedItemIds.size})</h2>
+              <h2 className="text-lg font-semibold mb-2 border-b pb-2">Selected Items ({selectedItemIds.size})</h2>
               <div className="flex-grow overflow-y-auto">
                 <SelectedItemsList />
               </div>
             </div>
             {/* Item Grid (Bottom Right) */}
             <div className="bg-white rounded-lg shadow p-4 flex-grow flex flex-col overflow-y-auto">
-              <h2 className="text-lg font-semibold mb-3 border-b pb-2">3. Scan Items for Operation</h2>
+              <h2 className="text-lg font-semibold mb-3 border-b pb-2">Scan Items for Operation</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {items.map(item => {
                   const isSelected = selectedItemIds.has(item.id);
@@ -320,7 +320,7 @@ export default function OperationPage() {
         </main>
         <footer className="bg-white shadow-up p-4 h-1/3 flex gap-4">
           <div className="flex-grow border rounded-lg p-4 flex flex-col overflow-y-auto">
-            <h2 className="text-lg font-semibold border-b pb-2 mb-3">3. Session Logs ({logs.length})</h2>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">Session Logs ({logs.length})</h2>
             <div className="flex-grow overflow-y-auto">
               <LogList />
               </div>
@@ -344,15 +344,15 @@ export default function OperationPage() {
           {activeTab === 'scan' && (
             <div>
               <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <h2 className="text-lg font-semibold mb-2">1. Scan Pallet</h2>
+                <h2 className="text-lg font-semibold mb-2">Scan Pallet</h2>
                 {currentPallet ? <div className="p-3 rounded bg-blue-100 text-center font-mono font-bold">{currentPallet.id}</div> : <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2">Tap to Add Pallet</button>}
               </div>
               <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <h2 className="text-lg font-semibold mb-2">2. Selected Items ({selectedItemIds.size})</h2>
+                <h2 className="text-lg font-semibold mb-2">Selected Items ({selectedItemIds.size})</h2>
                 <div className="max-h-24 overflow-y-auto"><SelectedItemsList /></div>
               </div>
               <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold mb-2">3. Scan Items</h2>
+                <h2 className="text-lg font-semibold mb-2">Scan Items</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {items.map(item => {
                     const isSelected = selectedItemIds.has(item.id);

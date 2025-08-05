@@ -172,10 +172,12 @@ export async function updateOutgoingItems(logs: LogEntry[]) {
         id: item.id,
         fields: {
           'Pallet ID': { text: '' },
-          'Status': 'In transit - Outgoing',
+          'Status': 'Outgoing',
         }
       }))
     );
+
+    if (itemUpdates.length === 0) return;
 
     // Process updates in chunks of 10
     for (let i = 0; i < itemUpdates.length; i += 10) {

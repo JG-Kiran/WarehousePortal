@@ -15,8 +15,11 @@ type Item = {
     [key: string]: any;
   };
 };
-type Pallet = { id: string };
-type LogEntry = { logId: string; pallet: Pallet; items: Item[] };
+
+type LogEntry = { 
+  logId: string; 
+  items: Item[] 
+};
 
 export default function OutgoingCustomerPage() {
   const { operationId, customerId } = useParams() as { operationId: string, customerId: string };
@@ -26,12 +29,13 @@ export default function OutgoingCustomerPage() {
   const [error, setError] = useState('');
   
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
-  const [currentPallet, setCurrentPallet] = useState<Pallet | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loggedItemIds, setLoggedItemIds] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [barcodeBuffer, setBarcodeBuffer] = useState('');
   const [lastKeyTime, setLastKeyTime] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'scan' | 'logs'>('scan');
 
   useEffect(() => {
@@ -91,9 +95,6 @@ export default function OutgoingCustomerPage() {
         }
         return;
       }
-      // If not an item, assume it's a pallet and replace the current one
-      console.log(`Pallet with barcode ${barcode} scanned.`);
-      setCurrentPallet({ id: barcode });
     };
     
     const handleUnselectItem = (itemIdToUnselect: string) => {
@@ -104,28 +105,18 @@ export default function OutgoingCustomerPage() {
       });
     };
   
-    const handleAddPalletClick = () => {
-      const palletBarcode = prompt("Scanner not detected. Please enter pallet barcode manually:");
-      if (palletBarcode) {
-          handleBarcodeScanned(palletBarcode);
-      }
-    };
-  
     const handleAddLog = () => {
-      if (selectedItemIds.size === 0 || !currentPallet) {
-        alert('Please select at least one item and scan a pallet.');
+      if (selectedItemIds.size === 0) {
+        alert('Please select at least one item.');
         return;
       }
   
       const selectedItems = itemsToScan.filter(item => selectedItemIds.has(item.id));
-  
       const newLog: LogEntry = {
         logId: `log-${Date.now()}`,
-        pallet: currentPallet,
         items: selectedItems,
       };
       setLogs(prev => [newLog, ...prev]);
-  
       setLoggedItemIds(prev => new Set([...prev, ...selectedItemIds]));
       setSelectedItemIds(new Set());
     };
@@ -138,8 +129,7 @@ export default function OutgoingCustomerPage() {
       const logToEdit = logs.find(log => log.logId === logIdToEdit);
       if (!logToEdit) return;
   
-      // Restore the pallet and selected items
-      setCurrentPallet(logToEdit.pallet);
+      // Restore selected items
       setSelectedItemIds(new Set(logToEdit.items.map(item => item.id)));
   
       // Then, remove the log as if it were being cleared
@@ -151,7 +141,6 @@ export default function OutgoingCustomerPage() {
       if (!logToRemove) return;
   
       setLogs(prevLogs => prevLogs.filter(log => log.logId !== logIdToRemove));
-      // Get the IDs of items that were in the cleared log
       const itemIdsToUnlog = new Set(logToRemove.items.map(item => item.id));
       // Remove these item IDs from the master set of logged items
       setLoggedItemIds(prevLoggedIds => {
@@ -168,7 +157,6 @@ export default function OutgoingCustomerPage() {
       setError('');
   
       try {
-        // THE KEY CHANGE: Call the new API route for outgoing items
         const res = await fetch('/api/airtable/submit-outgoing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -225,7 +213,6 @@ export default function OutgoingCustomerPage() {
         {logs.map(log => (
           <li key={log.logId} className="text-sm bg-gray-50 p-2 rounded flex justify-between items-start">
             <div>
-              <strong>Pallet: {log.pallet.id}</strong>
               <ul className="list-disc list-inside pl-4 font-mono">
               {log.items.map(item => <li key={item.id}>{getDisplayValue(item.fields['Barcode'])}</li>)}
               </ul>
@@ -235,7 +222,7 @@ export default function OutgoingCustomerPage() {
               <button 
                 onClick={() => handleEditLog(log.logId)}
                 className="bg-blue-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-blue-600 text-xs"
-                aria-label={`Edit log for pallet ${log.pallet.id}`}
+                aria-label={`Edit log: ${log.logId}`}
               >
                 &#9998; {/* Pencil icon */}
               </button>
@@ -243,7 +230,7 @@ export default function OutgoingCustomerPage() {
               <button 
                 onClick={() => handleClearLog(log.logId)}
                 className="bg-red-500 text-white font-bold w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-red-600"
-                aria-label={`Clear log for pallet ${log.pallet.id}`}
+                aria-label={`Clear log: ${log.logId}`}
               >
                 &times;
               </button>
@@ -265,32 +252,21 @@ export default function OutgoingCustomerPage() {
           <h1 className="text-2xl font-bold">Customer: {customerId}</h1>
           <div style={{ width: '250px' }}></div> 
         </header>
+
         <main className="flex-grow flex p-4 gap-4 overflow-hidden">
-          {/* Left Panel for Pallet and Actions */}
-          <div className="w-1/4 bg-white rounded-lg shadow p-4 flex flex-col">
-            <h2 className="text-lg font-semibold mb-3 border-b pb-2">1. Pallet & Actions</h2>
-            <div className="mb-4">
-              <h3 className="font-semibold">Scanned Pallet</h3>
-              {currentPallet ? <div className="p-2 mt-1 rounded border bg-blue-100 text-center"><span className="font-bold text-lg font-mono">{currentPallet.id}</span></div> : <div className="text-center text-gray-500 pt-2">Scan a pallet.</div>}
-            </div>
-            <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2 font-semibold mb-4">Add Pallet Manually</button>
-            <div className="border-t pt-4 mt-auto">
-              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">Add to Log</button>
-            </div>
-          </div>
-          
-          {/* Right side now contains Selected Items and the Item Grid */}
-          <div className="flex-grow flex flex-col gap-4 overflow-hidden">
-            {/* Selected Items Panel (Top Right) */}
-            <div className="bg-white rounded-lg shadow p-4 flex flex-col h-1/3">
-              <h2 className="text-lg font-semibold mb-2 border-b pb-2">2. Selected Items ({selectedItemIds.size})</h2>
-              <div className="flex-grow overflow-y-auto">
+            {/* Selected Items Panel */}
+            <div className="w-1/4 bg-white rounded-lg shadow p-4 flex flex-col">
+              <h2 className="text-lg font-semibold mb-2 border-b pb-2 flex-shrink-0">Selected Items ({selectedItemIds.size})</h2>
+              <div className="flex-grow overflow-y-auto pr-2">
                 <SelectedItemsList />
+                <div className="border-t pt-4 mt-2 flex-shrink-0">
+                  <button onClick={handleAddLog} disabled={selectedItemIds.size === 0} className="w-full bg-blue-600 text-white rounded py-2 font-semibold disabled:bg-gray-400">Add to Log</button>
+                </div>
               </div>
             </div>
-            {/* Item Grid (Bottom Right) */}
-            <div className="bg-white rounded-lg shadow p-4 flex-grow flex flex-col overflow-y-auto">
-              <h2 className="text-lg font-semibold mb-3 border-b pb-2">3. Scan Items for Operation</h2>
+            {/* Item Grid */}
+            <div className="flex-grow bg-white rounded-lg shadow p-4 flex-grow flex flex-col overflow-y-auto">
+              <h2 className="text-lg font-semibold mb-3 border-b pb-2">Scan Items for Operation</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {itemsToScan.map(item => {
                   const isSelected = selectedItemIds.has(item.id);
@@ -300,11 +276,10 @@ export default function OutgoingCustomerPage() {
                 })}
               </div>
             </div>
-          </div>
         </main>
         <footer className="bg-white shadow-up p-4 h-1/3 flex gap-4">
           <div className="flex-grow border rounded-lg p-4 flex flex-col overflow-y-auto">
-            <h2 className="text-lg font-semibold border-b pb-2 mb-3">3. Session Logs ({logs.length})</h2>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">Session Logs ({logs.length})</h2>
             <div className="flex-grow overflow-y-auto">
               <LogList />
               </div>
@@ -316,7 +291,7 @@ export default function OutgoingCustomerPage() {
       </div>
 
       {/* --- Mobile Layout --- */}
-      <div className="md:hidden flex flex-col h-screen">
+      <div className="md:hidden flex flex-col h-screen bg-gray-100 text-black">
         <header className="bg-white shadow p-4 flex justify-between items-center">
           {/* Back Button */}
           <Link href="/dashboard/outgoing" className="text-sm bg-gray-200 px-3 py-1 rounded font-semibold">
@@ -328,10 +303,6 @@ export default function OutgoingCustomerPage() {
         <main className="flex-grow p-4 overflow-y-auto">
           {activeTab === 'scan' && (
             <div>
-              <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <h2 className="text-lg font-semibold mb-2">1. Scan Pallet</h2>
-                {currentPallet ? <div className="p-3 rounded bg-blue-100 text-center font-mono font-bold">{currentPallet.id}</div> : <button onClick={handleAddPalletClick} className="w-full bg-indigo-600 text-white rounded py-2">Tap to Add Pallet</button>}
-              </div>
               <div className="bg-white rounded-lg shadow p-4 mb-4">
                 <h2 className="text-lg font-semibold mb-2">2. Selected Items ({selectedItemIds.size})</h2>
                 <div className="max-h-24 overflow-y-auto"><SelectedItemsList /></div>
@@ -347,7 +318,7 @@ export default function OutgoingCustomerPage() {
                   })}
                 </div>
               </div>
-              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0 || !currentPallet} className="w-full bg-blue-600 text-white rounded py-3 font-semibold disabled:bg-gray-400 mt-4">Add {selectedItemIds.size} Items to Log</button>
+              <button onClick={handleAddLog} disabled={selectedItemIds.size === 0} className="w-full bg-blue-600 text-white rounded py-3 font-semibold disabled:bg-gray-400 mt-4">Add {selectedItemIds.size} Items to Log</button>
             </div>
           )}
           {activeTab === 'logs' && (
