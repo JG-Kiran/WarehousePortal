@@ -334,7 +334,7 @@ export default function OperationPage() {
       {/* --- Mobile Layout --- */}
       <div className="md:hidden flex flex-col h-screen bg-gray-100 text-black">
         <header className="bg-white shadow p-4 flex justify-between items-center">
-          <Link href="/dashboard" className="text-sm bg-gray-200 text-black px-3 py-1 rounded font-semibold hover:bg-gray-300 transition">
+          <Link href="/dashboard/incoming" className="text-sm bg-gray-200 text-black px-3 py-1 rounded font-semibold hover:bg-gray-300 transition">
             &larr; Back
           </Link>
           <h1 className="text-lg font-bold">Op: {operationId}</h1>
